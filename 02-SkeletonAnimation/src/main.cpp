@@ -90,6 +90,15 @@ Model modelBuzzLeftArm;
 Model modelBuzzLeftForeArm;
 Model modelBuzzLeftHand;
 
+// Modelos animados
+Model mayModelAnimate;
+
+// Cowboy
+Model modelCowboyAnimate;
+
+// Guardian
+Model modelGuardianAnimate;
+
 GLuint textureCespedID, textureWallID, textureWindowID, textureHighwayID, textureLandingPadID;
 GLuint skyboxTextureID;
 
@@ -120,6 +129,11 @@ glm::mat4 modelMatrixLambo = glm::mat4(1.0);
 glm::mat4 modelMatrixAircraft = glm::mat4(1.0);
 glm::mat4 modelMatrixDart = glm::mat4(1.0f);
 glm::mat4 modelMatrixBuzz = glm::mat4(1.0f);
+glm::mat4 modelMatrixMay = glm::mat4(1.0f);
+glm::mat4 modelMatrixCowboy = glm::mat4(1.0f);
+glm::mat4 modelMatrixGuardian = glm::mat4(1.0f);
+
+int animationIndexMay = 1;
 
 float rotDartHead = 0.0, rotDartLeftArm = 0.0, rotDartLeftHand = 0.0, rotDartRightArm = 0.0, rotDartRightHand = 0.0, rotDartLeftLeg = 0.0, rotDartRightLeg = 0.0;
 float rotBuzzHead = 0.0, rotBuzzLeftarm = 0.0, rotBuzzLeftForeArm = 0.0, rotBuzzLeftHand = 0.0;
@@ -332,6 +346,18 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	modelBuzzLeftHand.loadModel("../models/buzz/buzzlightyLeftHand.obj");
 	modelBuzzLeftHand.setShader(&shaderMulLighting);
 
+	// May
+	mayModelAnimate.loadModel("../models/mayow/personaje2.fbx");
+	mayModelAnimate.setShader(&shaderMulLighting);
+
+	// Cowboy
+	modelCowboyAnimate.loadModel("../models/cowboy/Character Running.fbx");
+	modelCowboyAnimate.setShader(&shaderMulLighting);
+
+	// Guardian
+	modelGuardianAnimate.loadModel("../models/boblampclean/boblampclean.md5mesh");
+	modelGuardianAnimate.setShader(&shaderMulLighting);
+
 	camera->setPosition(glm::vec3(0.0, 3.0, 4.0));
 	
 	// Carga de texturas para el skybox
@@ -543,6 +569,9 @@ void destroy() {
 	modelBuzzLeftForeArm.destroy();
 	modelBuzzLeftHand.destroy();
 	modelBuzzTorso.destroy();
+	mayModelAnimate.destroy();
+	modelCowboyAnimate.destroy();
+	modelGuardianAnimate.destroy();
 
 	// Textures Delete
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -748,6 +777,29 @@ bool processInput(bool continueApplication) {
 	else if (modelSelected == 2 && glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
 		modelMatrixBuzz = glm::translate(modelMatrixBuzz, glm::vec3(0.0, 0.0, -0.02));
 
+	// Movimientos de may
+	if (modelSelected == 0, glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+	{
+		modelMatrixMay = glm::rotate(modelMatrixMay, 0.02f, glm::vec3(0, 1, 0));
+		animationIndexMay = 0;
+	}
+	else if (modelSelected == 0, glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+	{
+		modelMatrixMay = glm::rotate(modelMatrixMay, -0.02f, glm::vec3(0, 1, 0));
+		animationIndexMay = 0;
+	}
+
+	if (modelSelected == 0, glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+	{
+		modelMatrixMay = glm::translate(modelMatrixMay, glm::vec3(0, 0, 0.02f));
+		animationIndexMay = 0;
+	}
+	else if (modelSelected == 0, glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+	{
+		modelMatrixMay = glm::translate(modelMatrixMay, glm::vec3(0, 0, -0.008f));
+		animationIndexMay = 0;
+	}
+
 	glfwPollEvents();
 	return continueApplication;
 }
@@ -776,6 +828,13 @@ void applicationLoop() {
 	modelMatrixDart = glm::translate(modelMatrixDart, glm::vec3(3.0, 0.0, 20.0));
 
 	modelMatrixBuzz = glm::translate(modelMatrixBuzz, glm::vec3(15.0, 0.0, -10.0));
+
+	modelMatrixMay = glm::translate(modelMatrixMay, glm::vec3(12.0f, 0.01f, -6.0f));
+
+	modelMatrixCowboy = glm::translate(modelMatrixCowboy, glm::vec3(12.0f, 0.01f, 0.0f));
+
+	modelMatrixGuardian = glm::translate(modelMatrixGuardian, glm::vec3(14.0f, 0.01f, 0.0f));
+	modelMatrixGuardian = glm::rotate(modelMatrixGuardian, glm::radians(-90.0f), glm::vec3(1, 0, 0));
 
 	// Variables to interpolation key frames
 	fileName = "../animaciones/animation_dart_joints.txt";
@@ -1111,6 +1170,16 @@ void applicationLoop() {
 		modelMatrixLeftHand = glm::rotate(modelMatrixLeftHand, glm::radians(-45.0f), glm::vec3(0, 1, 0));
 		modelMatrixLeftHand = glm::translate(modelMatrixLeftHand, glm::vec3(-0.416066, -0.587046, -0.076258));
 		modelBuzzLeftHand.render(modelMatrixLeftHand);
+
+		glm::mat4 modelMatrixMayBody = glm::scale(modelMatrixMay, glm::vec3(0.02));
+		mayModelAnimate.setAnimationIndex(animationIndexMay);
+		mayModelAnimate.render(modelMatrixMayBody);
+		animationIndexMay = 1;
+
+		glm::mat4 modelMatrixCowboyBody = glm::scale(modelMatrixCowboy, glm::vec3(0.002));
+		modelCowboyAnimate.render(modelMatrixCowboyBody);
+
+		modelGuardianAnimate.render(glm::scale(modelMatrixGuardian, glm::vec3(0.03)));
 
 		/*******************************************
 		 * Skybox
