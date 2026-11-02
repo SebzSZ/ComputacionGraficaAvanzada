@@ -39,6 +39,9 @@
 
 #include "Headers/AnimationUtils.h"
 
+// Cabeceras de colisiones
+#include "Headers/Colisiones.h"
+
 #define ARRAY_SIZE_IN_ELEMENTS(a) (sizeof(a)/sizeof(a[0]))
 
 int screenWidth;
@@ -63,6 +66,9 @@ Box boxWalls;
 Box boxHighway;
 Box boxLandingPad;
 Sphere esfera1(10, 10);
+Box boxCollider;
+Sphere sphereCollider(10, 10);
+Cylinder rayModel(10, 10, 1.0, 1.0, 1.0);
 // Models complex instances
 Model modelRock;
 Model modelAircraft;
@@ -216,6 +222,17 @@ std::vector<float> lamp2Orientation = {
 double deltaTime;
 double currTime, lastTime;
 
+// Jump variables
+bool isJump = false;
+float GRAVITY = 9.81;
+double tmv = 0;
+double startTimeJump = 0;
+
+// Colliders
+std::map<std::string, std::tuple<AbstractModel::OBB, glm::mat4, glm::mat4>> collidersOBB;
+std::map<std::string, std::tuple<AbstractModel::SBB, glm::mat4, glm::mat4>> collidersSBB;
+std::map<std::string, std::tuple<AbstractModel::AABB, glm::mat4, glm::mat4>> collidersAABB;
+
 // Variables animacion maquina de estados eclipse
 const float avance = 0.1;
 const float giroEclipse = 0.5f;
@@ -295,6 +312,19 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	skyboxSphere.init();
 	skyboxSphere.setShader(&shaderSkybox);
 	skyboxSphere.setScale(glm::vec3(20.0f, 20.0f, 20.0f));
+
+	// Inicialización de colliders
+	boxCollider.init();
+	boxCollider.setShader(&shader);
+	boxCollider.setColor(glm::vec4(1.0));
+
+	sphereCollider.init();
+	sphereCollider.setShader(&shader);
+	sphereCollider.setColor(glm::vec4(1.0));
+
+	rayModel.init();
+	rayModel.setShader(&shader);
+	rayModel.setColor(glm::vec4(1.0));
 
 	boxCesped.init();
 	boxCesped.setShader(&shaderMulLighting);
@@ -935,6 +965,14 @@ bool processInput(bool continueApplication) {
 		animationMayowIndex = 0;
 	}
 
+	// Evento de salto
+	bool keySpaceStatus = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+	if (!isJump && keySpaceStatus) {
+		isJump = true;
+		startTimeJump = currTime;
+		tmv = 0;
+	}
+
 	glfwPollEvents();
 	return continueApplication;
 }
@@ -1347,7 +1385,12 @@ void applicationLoop() {
 		modelMatrixMayow[0] = glm::vec4(ejex, 0.0);
 		modelMatrixMayow[1] = glm::vec4(ejey, 0.0);
 		modelMatrixMayow[2] = glm::vec4(ejez, 0.0);
-		modelMatrixMayow[3][1] = terrain.getHeightTerrain(modelMatrixMayow[3][0], modelMatrixMayow[3][2]);
+		modelMatrixMayow[3][1] = -GRAVITY / 2 * pow(tmv, 2) + 7.0 * tmv + terrain.getHeightTerrain(modelMatrixMayow[3][0], modelMatrixMayow[3][2]);
+		tmv = currTime - startTimeJump;
+		if (modelMatrixMayow[3].y < terrain.getHeightTerrain(modelMatrixMayow[3].x, modelMatrixMayow[3].z)) {
+			isJump = false;
+			modelMatrixMayow[3][1] = terrain.getHeightTerrain(modelMatrixMayow[3][0], modelMatrixMayow[3][2]);
+		}
 		glm::mat4 modelMatrixMayowBody = glm::mat4(modelMatrixMayow);
 		modelMatrixMayowBody = glm::scale(modelMatrixMayowBody, glm::vec3(0.021f));
 		mayowModelAnimate.setAnimationIndex(animationMayowIndex);
@@ -1386,6 +1429,64 @@ void applicationLoop() {
 		glCullFace(oldCullFaceMode);
 		glDepthFunc(oldDepthFuncMode);
 
+		// Creación de colliders
+		// Collider de dart
+		AbstractModel::OBB dartCollider;
+		glm::mat4 modelMatrixColliderDart = glm::mat4(modelMatrixDart);
+		// Guardar la orientación inicial
+		dartCollider.u = glm::quat_cast(modelMatrixColliderDart);
+		modelMatrixColliderDart = glm::scale(modelMatrixColliderDart, glm::vec3(0.5f));
+		modelMatrixColliderDart = glm::translate(modelMatrixColliderDart, modelDartLegoBody.getObb().c);
+		dartCollider.c = modelMatrixColliderDart[3];
+		dartCollider.e = modelDartLegoBody.getObb().e * 0.5f;
+		addOrUpdateColliders(collidersOBB, "dart", dartCollider, modelMatrixDart);
+		// Aircraft collider
+		AbstractModel::OBB aircraftCollider;
+		glm::mat4 modelMatrixColliderAircraft = glm::mat4(modelMatrixAircraft);
+		// Guardar la orientación inicial
+		aircraftCollider.u = glm::quat_cast(modelMatrixColliderAircraft);
+		modelMatrixColliderAircraft = glm::scale(modelMatrixColliderAircraft, glm::vec3(0.5f));
+		modelMatrixColliderAircraft = glm::translate(modelMatrixColliderAircraft, modelAircraft.getObb().c);
+		aircraftCollider.c = modelMatrixColliderAircraft[3];
+		aircraftCollider.e = modelAircraft.getObb().e * 1.0f;
+		addOrUpdateColliders(collidersOBB, "aircraft", aircraftCollider, modelMatrixAircraft);
+		// May Collider
+		// Aircraft collider
+		AbstractModel::OBB mayCollider;
+		glm::mat4 modelMatrixColliderMay = glm::mat4(modelMatrixMayow);
+		modelMatrixColliderMay = glm::rotate(modelMatrixColliderMay, glm::radians(-90.0f), glm::vec3(1, 0, 0));
+		// Guardar la orientación inicial
+		mayCollider.u = glm::quat_cast(modelMatrixColliderMay);
+		modelMatrixColliderMay = glm::scale(modelMatrixColliderMay, glm::vec3(0.021f));
+		modelMatrixColliderMay = glm::translate(modelMatrixColliderMay, mayowModelAnimate.getObb().c);
+		mayCollider.c = modelMatrixColliderMay[3];
+		mayCollider.e = mayowModelAnimate.getObb().e * 0.021f * glm::vec3(0.7f, 1.0f, 0.7f);
+		addOrUpdateColliders(collidersOBB, "may", mayCollider, modelMatrixMayow);
+
+		// Collider de la roca
+		AbstractModel::SBB rockCollider;
+		glm::mat4 modelMatrixColliderRock = glm::mat4(matrixModelRock);
+		modelMatrixColliderRock = glm::scale(modelMatrixColliderRock, glm::vec3(1.0f));
+		modelMatrixColliderRock = glm::translate(modelMatrixColliderRock, modelRock.getSbb().c);
+		rockCollider.c = modelMatrixColliderRock[3];
+		rockCollider.ratio = modelRock.getSbb().ratio * 1.0f;
+		addOrUpdateColliders(collidersSBB, "rock", rockCollider, matrixModelRock);
+
+		// Collider render
+		for (auto it = collidersSBB.begin(); it != collidersSBB.end(); it++) {
+			glm::mat4 matrixCollider = glm::translate(glm::mat4(1.0f), std::get<0>(it->second).c);
+			matrixCollider = glm::scale(matrixCollider, glm::vec3(std::get<0>(it->second).ratio * 2.0));
+			sphereCollider.enableWireMode();
+			sphereCollider.render(matrixCollider);
+		}
+
+		for (auto it = collidersOBB.begin(); it != collidersOBB.end(); it++) {
+			glm::mat4 matrixCollider = glm::translate(glm::mat4(1.0f), std::get<0>(it->second).c);
+			matrixCollider = matrixCollider * glm::mat4_cast(std::get<0>(it->second).u);
+			matrixCollider = glm::scale(matrixCollider, glm::vec3(std::get<0>(it->second).e * 2.0f));
+			boxCollider.enableWireMode();
+			boxCollider.render(matrixCollider);
+		}
 		
 		// Animaciones por keyframes dart Vader
 		// Para salvar los keyframes

@@ -54,7 +54,7 @@ std::shared_ptr<FirstPersonCamera> camera(new FirstPersonCamera());
 Sphere skyboxSphere(20, 20);
 Model ireliaModelAnimate;
 // Terrain model instance
-Terrain terrain(-1, -1, 200, 8, "../Textures/heightmap-20271.png");
+Terrain terrain(-1, -1, 200, 8, "../Textures/heightmap-p4.png");
 
 GLuint textureCespedID;
 GLuint skyboxTextureID;
@@ -159,7 +159,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	skyboxSphere.setScale(glm::vec3(20.0f, 20.0f, 20.0f));
 
 	// Irelia
-	ireliaModelAnimate.loadModel("../models/Irelia/IreliaRigAnimations.fbx");
+	ireliaModelAnimate.loadModel("../models/Irelia/IreliaFinal.fbx");
 	ireliaModelAnimate.setShader(&shaderMulLighting);
 
 	// Terreno
@@ -191,7 +191,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	}
 
 	// Definiendo la textura a utilizar
-	Texture textureCesped("../Textures/grassy2.png");
+	Texture textureCesped("../Textures/camino4.png");
 	// Carga el mapa de bits (FIBITMAP es el tipo de dato de la libreria)
 	textureCesped.loadImage();
 	// Creando la textura con id 1
@@ -222,7 +222,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 
 	// Se define la textura de los terrenos
 	// Definiendo la textura
-	Texture textureR("../Textures/mud.png");
+	Texture textureR("../Textures/camino2.png");
 	textureR.loadImage(); // Cargar la textura
 	glGenTextures(1, &textureRID); // Creando el id de la textura del terreno
 	glBindTexture(GL_TEXTURE_2D, textureRID); // Se enlaza la textura
@@ -241,7 +241,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	textureR.freeImage(); // Liberamos memoria
 
 	// Definiendo la textura
-	Texture textureG("../Textures/grassFlowers.png");
+	Texture textureG("../Textures/camino3.png");
 	textureG.loadImage(); // Cargar la textura
 	glGenTextures(1, &textureGID); // Creando el id de la textura del terreno
 	glBindTexture(GL_TEXTURE_2D, textureGID); // Se enlaza la textura
@@ -260,7 +260,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	textureG.freeImage(); // Liberamos memoria
 
 	// Definiendo la textura
-	Texture textureB("../Textures/path.png");
+	Texture textureB("../Textures/camino1.png");
 	textureB.loadImage(); // Cargar la textura
 	glGenTextures(1, &textureBID); // Creando el id de la textura del terreno
 	glBindTexture(GL_TEXTURE_2D, textureBID); // Se enlaza la textura
@@ -279,7 +279,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	textureB.freeImage(); // Liberamos memoria
 
 	// Definiendo la textura
-	Texture textureBM("../Textures/blendmap_20271.png");
+	Texture textureBM("../Textures/blendmap-p4.png");
 	textureBM.loadImage(); // Cargar la textura
 	glGenTextures(1, &textureBMID); // Creando el id de la textura del blend map
 	glBindTexture(GL_TEXTURE_2D, textureBMID); // Se enlaza la textura
@@ -390,6 +390,10 @@ bool processInput(bool continueApplication) {
 	else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS){
 		modelMatrixIrelia = glm::translate(modelMatrixIrelia, glm::vec3(0.0, 0.0, -0.01));
 		animationIreliaIndex = 1;
+	}
+	// Q tiene prioridad sobre la animacion de movimiento mientras se mantiene pulsada.
+	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS){
+		animationIreliaIndex = 2;
 	}
 
 	glfwPollEvents();

@@ -21,6 +21,7 @@
 #include "Headers/Cylinder.h"
 #include "Headers/Box.h"
 #include "Headers/FirstPersonCamera.h"
+#include "Headers/ThirdPersonCamera.h"
 
 //GLM include
 #define GLM_FORCE_RADIANS
@@ -53,7 +54,9 @@ Shader shaderMulLighting;
 //Shader para el terreno
 Shader shaderTerrain;
 
-std::shared_ptr<FirstPersonCamera> camera(new FirstPersonCamera());
+//std::shared_ptr<FirstPersonCamera> camera(new FirstPersonCamera());
+std::shared_ptr<Camera> camera(new ThirdPersonCamera());
+float distanceFromTarget = 7.0f;
 
 Sphere skyboxSphere(20, 20);
 Box boxCesped;
@@ -224,6 +227,7 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action,
 		int mode);
 void mouseCallback(GLFWwindow *window, double xpos, double ypos);
 void mouseButtonCallback(GLFWwindow *window, int button, int state, int mod);
+void scrollCallback(GLFWwindow *window, double xoffset, double yoffset);
 void init(int width, int height, std::string strTitle, bool bFullScreen);
 void destroy();
 bool processInput(bool continueApplication = true);
@@ -265,6 +269,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	glfwSetKeyCallback(window, keyCallback);
 	glfwSetCursorPosCallback(window, mouseCallback);
 	glfwSetMouseButtonCallback(window, mouseButtonCallback);
+	glfwSetScrollCallback(window, scrollCallback);
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
 	// Init glew
@@ -404,7 +409,9 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	terrain.init();
 	terrain.setShader(&shaderTerrain);
 
-	camera->setPosition(glm::vec3(0.0, 3.0, 4.0));
+	//camera->setPosition(glm::vec3(0.0, 3.0, 4.0));
+	camera->setDistanceFromTarget(distanceFromTarget);
+	camera->setSensitivity(1.0);
 	
 	// Carga de texturas para el skybox
 	Texture skyboxTexture = Texture("");
@@ -745,6 +752,11 @@ void mouseCallback(GLFWwindow *window, double xpos, double ypos) {
 	lastMousePosY = ypos;
 }
 
+void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+	distanceFromTarget -= yoffset;
+	camera->setDistanceFromTarget(distanceFromTarget);
+}
+
 void mouseButtonCallback(GLFWwindow *window, int button, int state, int mod) {
 	if (state == GLFW_PRESS) {
 		switch (button) {
@@ -767,16 +779,20 @@ bool processInput(bool continueApplication) {
 		return false;
 	}
 
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera->moveFrontCamera(true, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera->moveFrontCamera(false, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		camera->moveRightCamera(false, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		camera->moveRightCamera(true, deltaTime);
-	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
-		camera->mouseMoveCamera(offsetX, offsetY, deltaTime);
+	// if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+	// 	camera->moveFrontCamera(true, deltaTime);
+	// if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+	// 	camera->moveFrontCamera(false, deltaTime);
+	// if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+	// 	camera->moveRightCamera(false, deltaTime);
+	// if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+	// 	camera->moveRightCamera(true, deltaTime);
+	// if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+	// 	camera->mouseMoveCamera(offsetX, offsetY, deltaTime);
+	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+		camera->mouseMoveCamera(offsetX, 0.0, deltaTime);
+	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
+		camera->mouseMoveCamera(0.0, offsetY, deltaTime);
 	offsetX = 0;
 	offsetY = 0;
 
@@ -936,6 +952,10 @@ bool processInput(bool continueApplication) {
 void applicationLoop() {
 	bool psi = true;
 
+	glm::vec3 axis;
+	glm::vec4 target;
+	float angleTarget;
+
 	modelMatrixEclipse = glm::translate(modelMatrixEclipse, glm::vec3(27.5, 0, 30.0));
 	modelMatrixEclipse = glm::rotate(modelMatrixEclipse, glm::radians(180.0f), glm::vec3(0, 1, 0));
 	int state = 0;
@@ -997,6 +1017,26 @@ void applicationLoop() {
 
 		glm::mat4 projection = glm::perspective(glm::radians(45.0f),
 				(float) screenWidth / (float) screenHeight, 0.01f, 100.0f);
+
+		if (modelSelected == 1) {
+			axis = glm::axis(glm::quat_cast(modelMatrixDart));
+			angleTarget = glm::angle(glm::quat_cast(modelMatrixDart));
+			target = modelMatrixDart[3];
+		}
+		else if (modelSelected == 0) {
+			axis = glm::axis(glm::quat_cast(modelMatrixMayow));
+			angleTarget = glm::angle(glm::quat_cast(modelMatrixMayow));
+			target = modelMatrixMayow[3];
+		}
+		if (std::isnan(angleTarget))
+			angleTarget = 0.0;
+		if (axis.y < 0.0)
+			angleTarget *= -1.0;
+		if (modelSelected == 1)
+			angleTarget -= glm::radians(90.0f);
+		camera->setCameraTarget(target);
+		camera->setAngleTarget(angleTarget);
+		camera->updateCamera();
 		glm::mat4 view = camera->getViewMatrix();
 
 		// Settea la matriz de vista y projection al shader con solo color
