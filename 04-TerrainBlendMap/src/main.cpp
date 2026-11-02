@@ -391,7 +391,7 @@ bool processInput(bool continueApplication) {
 		modelMatrixIrelia = glm::translate(modelMatrixIrelia, glm::vec3(0.0, 0.0, -0.01));
 		animationIreliaIndex = 1;
 	}
-	// Q tiene prioridad sobre la animacion de movimiento mientras se mantiene pulsada.
+	
 	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS){
 		animationIreliaIndex = 2;
 	}
