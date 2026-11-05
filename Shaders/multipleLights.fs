@@ -37,7 +37,7 @@ struct  SpotLight{
 };
 
 const int MAX_POINT_LIGHTS = 20;
-const int MAX_SPOT_LIGHTS = 1;
+const int MAX_SPOT_LIGHTS = 2;
 
 out vec4 color;
 
@@ -95,7 +95,7 @@ vec3 calculateSpotLights(){
 		float intensity = clamp((theta - spotLights[i].outerCutOff) / epsilon, 0.0, 1.0);   
 		float distance = length(spotLights[i].position - fragPos);
 		float attenuation = 1.0f / (spotLights[i].constant + spotLights[i].linear * distance + spotLights[i].quadratic * distance * distance);
-		result +=  intensity * attenuation * calculateDirectionalLight(spotLights[i].light, spotLights[i].direction);
+		result +=  intensity * attenuation * calculateDirectionalLight(spotLights[i].light, -lightDir);
 	}
 	return result;
 }
